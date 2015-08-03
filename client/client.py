@@ -45,7 +45,9 @@ def getRPCOutput(ipaddr, port, command, params):	#given the location of the RPC 
 def run(command):	#just a simple wrapper around subprocess.check_output
     return subprocess.check_output(command, shell=True)	
 
-#def getAMDTemp():
+def getAMDTemp():	#parses ati-config to get GPU temps
+    out = ' '.join(run('ati-config').splitlines())
+    return re.findall(r'\d+.\d+C, out)	#matches any number of digits followed by a period followed by any number of digits followed by a C
 
 def getNvidiaTemp():	#parses nvidia-smi to get GPU temps
     out = ' '.join(run('nvidia-smi').splitlines())	#makes it all 1 line so only 1 regex execution needed
