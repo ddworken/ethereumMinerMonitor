@@ -1,24 +1,27 @@
 #!/bin/python
 
-import subprocess
-import re
-from time import sleep
+import subprocess	#used to call into curl to talk to the RPC server 
+import re	#used to parse out the temperature 
+from time import sleep	
+import sys
 
-ip = 'daviddworken.com'
-port = '8545'
+ip = '127.0.0.1'	#the IP address of the RPC server
+port = '8545'		#the port of the RPC server
+apiIP = 'http://daviddworken.com:80' 	#placeholder for what the IP of the API will end up being
 
-def getTemperature():
+def getTemperature():	#returns the temperature of the GPU no matter what brand 
     try:
 	temp = getAMDTemp()
     except:
 	try:
 	    temp = getNvidiaTemp()
    	except:
+	    print "Error: Could not detect a GPU. Do you have a GPU installed? If so, do you have either nvidia-smi or aticonfig installed?"
 	    return -1
-    return temp
+    return temp[0]	#only return the first GPU temp until we decide on the API for multiple GPUs
 
-def getRPCOutput(ipaddr, port, command, params):
-    formattedParams = "["
+def getRPCOutput(ipaddr, port, command, params):	#given the location of the RPC server, a command, and params for the command it will execute it
+    formattedParams = "["	#converting a python list into a javascript list (yes this is a horrible hack, but it works for the small subset of JS we need)
     for item in params:
 	if item == True or item == False:
 	    if item == True:
@@ -26,37 +29,39 @@ def getRPCOutput(ipaddr, port, command, params):
 	    if item == False:
 		formattedParams += "false, "
 	else:
-	    formattedParams += ("\"" + item + "\", ")
-	if params.index(item) + 1 == len(params):
+	    formattedParams += ("\"" + item + "\", ")	
+	if params.index(item) + 1 == len(params):	#removing the ', ' from the end so it isn't duplicated
 	    formattedParams = formattedParams[:-2]
     formattedParams += "]"
-    command = command.replace('.','_')
+    command = command.replace('.','_')	#repalce . with _ because that is how the RPC server wants to get commands 
     try:
 	out = run("curl --silent -X POST --data '{\"jsonrpc\":\"2.0\",\"method\":\"" + command + "\",\"params\":" + formattedParams + ",\"id\":67}' " + ipaddr + ":" + port)
     except:
+	print "Error: Could not connect to the RPC Server. If you have it running somewhere other than localhost port 8545 please change the constants defined in this file. "
+	sys.exit(1)
 	out = -1
     return out
 
-def run(command):
-    return subprocess.check_output(command, shell=True)
+def run(command):	#just a simple wrapper around subprocess.check_output
+    return subprocess.check_output(command, shell=True)	
 
 #def getAMDTemp():
 
-def getNvidiaTemp():
-    out = ' '.join(run('nvidia-smi').splitlines())
-    return re.findall(r'\d+C', out)[0] #only return first temperature until we decide on how to do the API for multiple GPUs
+def getNvidiaTemp():	#parses nvidia-smi to get GPU temps
+    out = ' '.join(run('nvidia-smi').splitlines())	#makes it all 1 line so only 1 regex execution needed
+    return re.findall(r'\d+C', out) 	#matches any number of digits followed by a C
 
-def getLastKnownBlockNumber():
-    return int(getRPCOutput(ip, port,'eth.blockNumber' , []).splitlines()[3].split('"')[3], 16)
+def getLastKnownBlockNumber():	
+    return int(getRPCOutput(ip, port,'eth.blockNumber' , []).splitlines()[3].split('"')[3], 16)	#this looks nasty (because it is) but it is parsing the JSON output from the RPC api
 
 def getLastKnownBlockHash():
-    lastBlockHex = hex(getLastKnownBlockNumber())
-    return getRPCOutput(ip, port, 'eth.getBlockByNumber', [lastBlockHex, False]).splitlines()[5].split('"')[3]
+    lastBlockHex = hex(getLastKnownBlockNumber())	#eth.getBlockByNumber wants the block number in hex not base 10
+    return getRPCOutput(ip, port, 'eth.getBlockByNumber', [lastBlockHex, False]).splitlines()[5].split('"')[3]	#see above comment
 
-def submitData(dict, address):
+def submitData(dict, address):	#submits the json to the server at address
     print dict
     run('curl --silent -X POST --data ' + str(dict) + " " + address)
 
 while True:
-    submitData({'blockHash':getLastKnownBlockHash(), 'blockNumber':getLastKnownBlockNumber(), 'temperature': getTemperature()}, "http://daviddworken.com")
-    sleep(3)
+    submitData({'blockHash':getLastKnownBlockHash(), 'blockNumber':getLastKnownBlockNumber(), 'temperature': getTemperature()}, apiIP)	#builds a dict before submitting it
+    sleep(3)	#sleep 3 seconds so we don't DOS the API server
