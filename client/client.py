@@ -46,7 +46,7 @@ def run(command):  # just a simple wrapper around subprocess.check_output
 
 def getAMDTemp():  # parses ati-config to get GPU temps
     out = ' '.join(run('aticonfig --odgt').splitlines())
-    return re.findall(r'\d+.\d+C',
+    return re.findall(r'\d+\.\d+ C',
                       out)  # matches any number of digits followed by a period followed by any number of digits followed by a C
 
 
