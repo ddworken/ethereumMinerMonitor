@@ -5,7 +5,7 @@ import re	#used to parse out the temperature
 from time import sleep	
 import sys
 
-ip = 'daviddworken.com'	#the IP address of the RPC server
+ip = '127.0.0.1'	#the IP address of the RPC server
 port = '8545'		#the port of the RPC server
 apiIP = 'http://daviddworken.com:80' 	#placeholder for what the IP of the API will end up being
 
