@@ -62,8 +62,8 @@ def getLastKnownBlockNumber():
 
 def getLastKnownBlockHash(lastBlockNumber):
     lastBlockHex = hex(lastBlockNumber)  # eth.getBlockByNumber wants the block number in hex not base 10
-    return getRPCOutput(ip, port, 'eth.getBlockByNumber', [lastBlockHex, False]).splitlines()[5].split('"')[
-        3]  # see above comment
+    res = json.loads(getRPCOutput(ip, port, 'eth.getBlockByNumber', [lastBlockHex, False]))['result']['hash']
+    return res
 
 
 while True:
